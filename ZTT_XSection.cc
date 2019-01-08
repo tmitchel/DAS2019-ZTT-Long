@@ -52,7 +52,6 @@ int main(int argc, char **argv) {
     /////////////////////////////////////////////////
     // Important Analysis Loop Will Happen Here!!! //
     /////////////////////////////////////////////////
-    cout << mcE << endl;
   }  // End Processing all entries
 
   // end of analysis code, close and write histograms/file
