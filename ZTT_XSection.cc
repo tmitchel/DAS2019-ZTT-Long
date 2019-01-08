@@ -40,6 +40,8 @@ int main(int argc, char **argv) {
   // add the histrograms of muon and tau visible mass (both for opposite sign and same sign pair )
   TH1F *visibleMassOS = new TH1F("visibleMassOS", "visibleMassOS", 30, 0, 300);
   TH1F *visibleMassSS = new TH1F("visibleMassSS", "visibleMassSS", 30, 0, 300);
+  TH1F *visibleMassOSAntiIso = new TH1F("visibleMassOSAntiIso", "visibleMassOSAntiIso", 30, 0, 300);
+  TH1F *visibleMassSSAntiIso = new TH1F("visibleMassSSAntiIso", "visibleMassSSAntiIso", 30, 0, 300);
   TH1F *visibleMassOSRelaxedTauIso = new TH1F("visibleMassOSRelaxedTauIso", "visibleMassOSRelaxedTauIso", 30, 0, 300);
   TH1F *visibleMassSSRelaxedTauIso = new TH1F("visibleMassSSRelaxedTauIso", "visibleMassSSRelaxedTauIso", 30, 0, 300);
 
@@ -54,7 +56,7 @@ int main(int argc, char **argv) {
   cout << "nentries_wtn====" << nentries_wtn << "\n";
 
   // Declare Vectors for muon and tau from Z
-  TLorentzVector Mu4Momentum, Tau4Momentum, Jet4Momentum;
+  TLorentzVector Mu4Momentum AntiIsoMu4Momentum, Tau4Momentum, Jet4Momentum;
 
   // Begin the event loop.
   for (Int_t i = 0; i < nentries_wtn; i++) {
@@ -88,17 +90,6 @@ int main(int argc, char **argv) {
           continue;
         }
 
-      // Calculate muon isolation.
-      float IsoMu = muPFChIso->at(imu) / muPt->at(imu);
-      if ((muPFNeuIso->at(imu) + muPFPhoIso->at(imu) - 0.5 * muPFPUIso->at(imu)) > 0.0) {
-        IsoMu += (muPFNeuIso->at(imu) + muPFPhoIso->at(imu) - 0.5 * muPFPUIso->at(imu)) / muPt->at(imu);
-      }
-
-      // Apply muon isolation.
-      if (IsoMu > 0.3) {
-        continue;
-      }
-
       // Apply medium muon ID.
       bool PassID = (muIDbit->at(imu) >> 2 & 1) == 1;  // 2 is tight
       if (!PassID) {
@@ -111,9 +102,20 @@ int main(int argc, char **argv) {
         continue;
       }
 
-      // Good muon, now add charge to vector and fill muon P4.
-      good_muon_charge.push_back(muCharge->at(imu));
-      Mu4Momentum.SetPtEtaPhiE(muPt->at(imu), muEta->at(imu), muPhi->at(imu), MuMass);
+      // Calculate muon isolation.
+      float IsoMu = muPFChIso->at(imu) / muPt->at(imu);
+      if ((muPFNeuIso->at(imu) + muPFPhoIso->at(imu) - 0.5 * muPFPUIso->at(imu)) > 0.0) {
+        IsoMu += (muPFNeuIso->at(imu) + muPFPhoIso->at(imu) - 0.5 * muPFPUIso->at(imu)) / muPt->at(imu);
+      }
+
+      // Apply muon isolation.
+      if (IsoMu > 0.3) {
+        AntiIsoMu4Momentum.SetPtEtaPhiE(muPt->at(imu), muEta->at(imu), muPhi->at(imu), MuMass);
+      } else {
+        // Good muon, now add charge to vector and fill muon P4.
+        good_muon_charge.push_back(muCharge->at(imu));
+        Mu4Momentum.SetPtEtaPhiE(muPt->at(imu), muEta->at(imu), muPhi->at(imu), MuMass);
+      }
     }  // End of muon loop
 
     // Apply dimuon veto and also make sure we found at least 1 good muon.
@@ -191,9 +193,14 @@ int main(int argc, char **argv) {
     if (OS) {
       visibleMassOS->SetDefaultSumw2();
       visibleMassOS->Fill((Mu4Momentum + Tau4Momentum).M(), evtwt);
+      visibleMassOSAntiIso->SetDefaultSumw2();
+      visibleMassOSAntiIso->Fill((AntiIsoMu4Momentum + Tau4Momentum).M(), evtwt);
+
     } else if (SS) {
       visibleMassSS->SetDefaultSumw2();
       visibleMassSS->Fill((Mu4Momentum + Tau4Momentum).M(), evtwt);
+      visibleMassSSAntiIso->SetDefaultSumw2();
+      visibleMassSSAntiIso->Fill((AntiIsoMu4Momentum + Tau4Momentum).M(), evtwt);
     }
   }  // End Processing all entries
 
