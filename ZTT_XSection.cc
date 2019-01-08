@@ -18,18 +18,18 @@ int main(int argc, char **argv) {
 
   std::string out = *(argv + 1);
   cout << "OUTPUT NAME IS:    " << out << endl;  // PRINTING THE OUTPUT FILE NAME
-  TFile *fout = TFile::Open(out.c_str(), "RECREATE");
+  TFile *fout = TFile::Open((out+".root").c_str(), "RECREATE");
 
   std::string input = *(argv + 2);
   cout << "INPUT NAME IS:    " << input << endl;  // PRINTING THE INPUT FILE NAME
   TFile *myFile = TFile::Open(input.c_str());
 
   // Number of events processed.
-  TH1F *HistoTot = reinterpret_cast<TH1F *>(myFile->Get("hcount"));
+  TH1F *HistoTot = reinterpret_cast<TH1F *>(myFile->Get("hEvents"));
 
   // Open pileup input files and read reweighting histograms.
-  TFile *PUData = new TFile("MyDataPileupHistogram2016.root");
-  TFile *PUMC = new TFile("mcMoriondPU.root");
+  TFile *PUData = new TFile("data/MyDataPileupHistogram2016.root");
+  TFile *PUMC = new TFile("data/mcMoriondPU.root");
   TH1F *HistoPUData = reinterpret_cast<TH1F *>(PUData->Get("pileup"));
   TH1F *HistoPUMC = reinterpret_cast<TH1F *>(PUMC->Get("pileup"));
 
@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
 
       // Good muon, now add charge to vector and fill muon P4.
       good_muon_charge.push_back(muCharge->at(imu));
-      Mu4Momentum.SetPtEtaPhiE(muPt->at(imu), muEta->at(imu), muPhi->at(imu), muEn->at(imu));
+      Mu4Momentum.SetPtEtaPhiE(muPt->at(imu), muEta->at(imu), muPhi->at(imu), MuMass);
     }  // End of muon loop
 
     // Apply dimuon veto and also make sure we found at least 1 good muon.

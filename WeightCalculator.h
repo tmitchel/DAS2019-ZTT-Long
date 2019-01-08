@@ -26,15 +26,20 @@ float XSection(std::string OutName) {
       {"WW", 115.0},
       {"WZ", 47.13},
       {"ZZ", 16.523},
-      {"SingleElectron.root", 1.},
-      {"SingleMuon.root", 1.}};
+      {"SingleElectron", 1.},
+      {"SingleMuon", 1.}};
 
   return cross_sections[OutName];
 }
 
 float weightCalc(TH1F *Histo, std::string outputName) {
   float luminosity(35900.);
-  return luminosity * XSection(outputName) * 1.0 / Histo->GetBinContent(0);
+  if (Histo->GetBinContent(2) > 0) {
+    return luminosity * XSection(outputName) * 1.0 / Histo->GetBinContent(2);
+  } else {
+    cerr << "No content in hEvents" << endl;
+    return 0;
+  }
 }
 
 float TMass_F(float pt3lep, float px3lep, float py3lep, float met, float metPhi) {
