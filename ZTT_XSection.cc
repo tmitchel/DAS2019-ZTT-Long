@@ -24,7 +24,18 @@ int main(int argc, char **argv) {
   cout << "INPUT NAME IS:    " << input << endl;  // PRINTING THE INPUT FILE NAME
   TFile *myFile = TFile::Open(input.c_str());
 
+  // Number of events processed.
   TH1F *HistoTot = reinterpret_cast<TH1F *>(myFile->Get("hcount"));
+
+  // Open pileup input files and read reweighting histograms.
+  TFile *PUData = new TFile("MyDataPileupHistogram2016.root");
+  TFile *PUMC = new TFile("mcMoriondPU.root");
+  TH1F *HistoPUData = reinterpret_cast<TH1F *>(PUData->Get("pileup"));
+  TH1F *HistoPUMC = reinterpret_cast<TH1F *>(PUMC->Get("pileup"));
+
+  // Normalize histograms.
+  HistoPUData->Scale(1.0 / HistoPUData->Integral());
+  HistoPUMC->Scale(1.0 / HistoPUMC->Integral());
 
   // add the histrograms of muon and tau visible mass (both for opposite sign and same sign pair )
   TH1F *visibleMassOS = new TH1F("visibleMassOS", "visibleMassOS", 30, 0, 300);
@@ -36,22 +47,154 @@ int main(int argc, char **argv) {
   cout.setf(ios::fixed, ios::floatfield);
 
   setBranches(Run_Tree);
+  auto evtwt = weightCalc(HistoTot, out);
+  cout << "LumiWeight is " << evtwt << "\n";
 
   auto nentries_wtn = Run_Tree->GetEntries();
   cout << "nentries_wtn====" << nentries_wtn << "\n";
+
+  // Declare Vectors for muon and tau from Z
+  TLorentzVector Mu4Momentum, Tau4Momentum, Jet4Momentum;
+
+  // Begin the event loop.
   for (Int_t i = 0; i < nentries_wtn; i++) {
     Run_Tree->GetEntry(i);
 
+    // Variables needed later.
+    bool OS(false), SS(false);
+    vector<float> btag_pt;
+    vector<int> good_muon_charge, good_tau_charge;
+
+    // Give a progress report while running.
     if (i % 1000 == 0) {
       fprintf(stdout, "\r  Processed events: %8d of %8lld ", i, nentries_wtn);
       fflush(stdout);
     }
 
-    TLorentzVector Mu4Momentum, Tau4Momentum;
+    // Apply muon trigger: HLT_IsoMu24_v
+    bool PassTrigger = (HLTEleMuX >> 19 & 1) == 1;
+    if (!PassTrigger) {
+      continue;
+    }
 
-    /////////////////////////////////////////////////
-    // Important Analysis Loop Will Happen Here!!! //
-    /////////////////////////////////////////////////
+    // Loop over muons in the event.
+    for (auto imu = 0; imu < nMu; imu++) {
+      // Muon kinematic selection.
+      if (muPt->at(imu) < 30 || fabs(muEta->at(imu)) > 2.1) {
+        continue;
+      }
+
+      if (fabs(muD0->at(imu)) > 0.045 || fabs(muDz->at(imu)) > 0.2) {
+          continue;
+        }
+
+      // Calculate muon isolation.
+      float IsoMu = muPFChIso->at(imu) / muPt->at(imu);
+      if ((muPFNeuIso->at(imu) + muPFPhoIso->at(imu) - 0.5 * muPFPUIso->at(imu)) > 0.0) {
+        IsoMu += (muPFNeuIso->at(imu) + muPFPhoIso->at(imu) - 0.5 * muPFPUIso->at(imu)) / muPt->at(imu);
+      }
+
+      // Apply muon isolation.
+      if (IsoMu > 0.3) {
+        continue;
+      }
+
+      // Apply medium muon ID.
+      bool PassID = (muIDbit->at(imu) >> 2 & 1) == 1;  // 2 is tight
+      if (!PassID) {
+        continue;
+      }
+
+      // Transverse mass cut to remove W events.
+      float MuMetTranverseMass = TMass_F(muPt->at(imu), muPt->at(imu) * cos(muPhi->at(imu)), muPt->at(imu) * sin(muPhi->at(imu)), pfMET, pfMETPhi);
+      if (MuMetTranverseMass > 40) {
+        continue;
+      }
+
+      // Good muon, now add charge to vector and fill muon P4.
+      good_muon_charge.push_back(muCharge->at(imu));
+      Mu4Momentum.SetPtEtaPhiE(muPt->at(imu), muEta->at(imu), muPhi->at(imu), muEn->at(imu));
+    }  // End of muon loop
+
+    // Apply dimuon veto and also make sure we found at least 1 good muon.
+    if (good_muon_charge.size() > 1 && good_muon_charge.at(0) * good_muon_charge.at(1) < 0) {
+      continue;
+    } else if (good_muon_charge.size() == 0) {
+      continue;
+    }
+
+    // Loop over taus in the event.
+    for (auto itau = 0; itau < nTau; itau++) {
+      // Tau kinematic selection.
+      if (tauPt->at(itau) < 30 || fabs(tauEta->at(itau)) > 2.3) {
+        continue;
+      }
+
+      // Tau quality selection.
+      if (taupfTausDiscriminationByDecayModeFinding->at(itau) < 0.5 ||
+          !tauByTightMuonRejection3->at(itau) || !tauByMVA6LooseElectronRejection->at(itau) ||
+          !tauByTightIsolationMVArun2v1DBoldDMwLT->at(itau)) {
+        continue;
+      }
+
+      // Good tau, now add charge to vector and fill tau P4.
+      good_tau_charge.push_back(tauCharge->at(itau));
+      Tau4Momentum.SetPtEtaPhiM(tauPt->at(itau), tauEta->at(itau), tauPhi->at(itau), tauMass->at(itau));
+    }  // End of tau loop
+
+    // Apply ditau veto and also make sure we found at least 1 good tau.
+    if (good_tau_charge.size() > 1 && good_tau_charge.at(0) * good_tau_charge.at(1) < 0) {
+      continue;
+    } else if (good_tau_charge.size() == 0) {
+      continue;
+    }
+
+    // Set OS and SS.
+    if (good_muon_charge.at(0) * good_tau_charge.at(0) < 0) {
+      OS = true;
+    } else {
+      SS = true;
+    }
+
+    // Count the number of btagged jets.
+    for (int ijet = 0; ijet < nJet; ijet++) {
+      Jet4Momentum.SetPtEtaPhiE(jetPt->at(ijet), jetEta->at(ijet), jetPhi->at(ijet), jetEn->at(ijet));
+      if (jetPt->at(ijet) > 20 && fabs(jetEta->at(ijet)) < 2.5 && jetCSV2BJetTags->at(ijet) > 0.8484 &&
+          Jet4Momentum.DeltaR(Tau4Momentum) > 0.5 && Jet4Momentum.DeltaR(Mu4Momentum) > 0.5) {
+        btag_pt.push_back(jetPt->at(ijet));
+      }
+    }
+    // Apply b-tag veto to supress ttbar.
+    if (btag_pt.size() > 0) {
+      continue;
+    }
+
+    // Last, apply dR(mu, tau) > 0.5 selection
+    if (Mu4Momentum.DeltaR(Tau4Momentum) < 0.5) {
+      continue;
+    }
+
+    // Do Pileup reweighting.
+    if (!isData) {
+      int puNUmmc = static_cast<int>(puTrue->at(0) * 10);
+      int puNUmdata = static_cast<int>(puTrue->at(0) * 10);
+      float PUMC_ = HistoPUMC->GetBinContent(puNUmmc + 1);
+      float PUData_ = HistoPUData->GetBinContent(puNUmdata + 1);
+      if (PUMC_ > 0) {
+        evtwt *= (PUData_ / PUMC_);
+      } else {
+        cerr << "Divide by 0 found while PU reweighting" << endl;
+      }
+    }
+
+    // Fill histograms.
+    if (OS) {
+      visibleMassOS->SetDefaultSumw2();
+      visibleMassOS->Fill((Mu4Momentum + Tau4Momentum).M(), evtwt);
+    } else if (SS) {
+      visibleMassSS->SetDefaultSumw2();
+      visibleMassSS->Fill((Mu4Momentum + Tau4Momentum).M(), evtwt);
+    }
   }  // End Processing all entries
 
   // end of analysis code, close and write histograms/file
