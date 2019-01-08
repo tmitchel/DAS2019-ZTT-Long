@@ -26,21 +26,15 @@ float XSection(std::string OutName) {
       {"WW", 115.0},
       {"WZ", 47.13},
       {"ZZ", 16.523},
-  };
+      {"SingleElectron.root", 1.},
+      {"SingleMuon.root", 1.}};
 
   return cross_sections[OutName];
 }
 
 float weightCalc(TH1F *Histo, std::string outputName) {
   float luminosity(35900.);
-  auto isSingleMu = outputName.find("SingleMu");
-  auto isSingleEle = outputName.find("SingleEle");
-
-  if (isSingleMu != string::npos || isSingleEle != string::npos) {
-    return 1;
-  } else {
-      return luminosity * XSection(outputName) * 1.0 / Histo->GetBinContent(0);
-  }
+  return luminosity * XSection(outputName) * 1.0 / Histo->GetBinContent(0);
 }
 
 float TMass_F(float pt3lep, float px3lep, float py3lep, float met, float metPhi) {
