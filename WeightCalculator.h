@@ -25,14 +25,17 @@ float XSection(std::string OutName) {
       {"TTJets", 831.76},
       {"WW", 115.0},
       {"WZ", 47.13},
-      {"ZZ", 16.523},
-      {"SingleElectron", 1.},
-      {"SingleMuon", 1.}};
+      {"ZZ", 16.523}};
 
   return cross_sections[OutName];
 }
 
 float weightCalc(TH1F *Histo, std::string outputName) {
+
+  if (outputName.find("SingleElectron") != string::npos || outputName.find("SingleMuon") != string::npos) {
+    return 1.;
+  }
+
   float luminosity(35900.);
   if (Histo->GetBinContent(2) > 0) {
     return luminosity * XSection(outputName) * 1.0 / Histo->GetBinContent(2);

@@ -38,6 +38,7 @@ int main(int argc, char **argv) {
   HistoPUMC->Scale(1.0 / HistoPUMC->Integral());
 
   // add the histrograms of muon and tau visible mass (both for opposite sign and same sign pair )
+  fout->cd();
   TH1F *visibleMassOS = new TH1F("visibleMassOS", "visibleMassOS", 30, 0, 300);
   TH1F *visibleMassSS = new TH1F("visibleMassSS", "visibleMassSS", 30, 0, 300);
   TH1F *visibleMassOSAntiIso = new TH1F("visibleMassOSAntiIso", "visibleMassOSAntiIso", 30, 0, 300);
@@ -56,7 +57,7 @@ int main(int argc, char **argv) {
   cout << "nentries_wtn====" << nentries_wtn << "\n";
 
   // Declare Vectors for muon and tau from Z
-  TLorentzVector Mu4Momentum AntiIsoMu4Momentum, Tau4Momentum, Jet4Momentum;
+  TLorentzVector Mu4Momentum, AntiIsoMu4Momentum, Tau4Momentum, Jet4Momentum;
 
   // Begin the event loop.
   for (Int_t i = 0; i < nentries_wtn; i++) {
@@ -206,10 +207,11 @@ int main(int argc, char **argv) {
 
   // end of analysis code, close and write histograms/file
   fout->cd();
-  visibleMassOS->Write();
-  visibleMassSS->Write();
-  visibleMassOSRelaxedTauIso->Write();
-  visibleMassSSRelaxedTauIso->Write();
+//  visibleMassOS->Write();
+//  visibleMassSS->Write();
+//  visibleMassOSRelaxedTauIso->Write();
+//  visibleMassSSRelaxedTauIso->Write();
+  fout->Write();
   fout->Close();
 }
 
