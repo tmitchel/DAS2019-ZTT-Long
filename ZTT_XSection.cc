@@ -83,6 +83,21 @@ int main(int argc, char **argv) {
       continue;
     }
 
+    int numTau(0);
+    for (int igen = 0; igen < nMC; igen++) {
+      if (fabs(mcPID->at(igen)) == 15 && mcMomPID->at(igen) == 23) {
+        numTau++;
+      }
+    }
+
+    // Z->ll must have 0 gen taus
+    // Z->tautau must have 2 gen taus
+    if (out.find("ToTauTau") != string::npos && numTau < 1) {
+      continue;
+    } else if (out.find("ToLL") != string::npos && numTau > 1) {
+      continue;
+    }
+
     // Loop over muons in the event.
     for (auto imu = 0; imu < nMu; imu++) {
       // Muon kinematic selection.
