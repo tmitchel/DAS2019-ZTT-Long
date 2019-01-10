@@ -1,11 +1,12 @@
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//   Compiling the code:   ./Make.sh ZTT_XSection.cc
-//   Running the code:     ./ZTT_XSection.exe OutPut.root   Input.root
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include <ostream>
 #include <string>
 #include "TreeReader.h"
 #include "WeightCalculator.h"
+
+//////////////////////////////////////////////////////////////////////////
+//   Compiling the code:   ./Make.sh ZTT_XSection.cc                    //
+//   Running the code:     ./ZTT_XSection.exe OutPut.root   Input.root  //
+//////////////////////////////////////////////////////////////////////////
 
 // Do some definitions up front
 void setBranches(TTree *);
@@ -50,7 +51,7 @@ int main(int argc, char **argv) {
   cout.setf(ios::fixed, ios::floatfield);
 
   setBranches(Run_Tree);
-  auto evtwt = weightCalc(HistoTot, out);
+  auto evtwt = weightCalc(HistoTot, input);
   cout << "LumiWeight is " << evtwt << "\n";
 
   auto nentries_wtn = Run_Tree->GetEntries();
@@ -75,6 +76,8 @@ int main(int argc, char **argv) {
     }
 
     // Apply muon trigger: HLT_IsoMu24_v
+    // do this now so we don't waste time processing an event that will fail
+    // definition: https://github.com/cmkuo/ggAnalysis/blob/master/ggNtuplizer/plugins/ggNtuplizer_globalEvent.cc#L151
     bool PassTrigger = (HLTEleMuX >> 19 & 1) == 1;
     if (!PassTrigger) {
       continue;
@@ -91,10 +94,11 @@ int main(int argc, char **argv) {
           continue;
         }
 
-      // Apply medium muon ID.
-      bool PassID = (muIDbit->at(imu) >> 2 & 1) == 1;  // 2 is tight
-      if (!PassID) {
-        continue;
+        // Apply medium muon ID.
+        // definition: https://github.com/cmkuo/ggAnalysis/blob/master/ggNtuplizer/plugins/ggNtuplizer_muons.cc#L166-L171
+        bool PassID = (muIDbit->at(imu) >> 1 & 1) == 1;
+        if (!PassID) {
+          continue;
       }
 
       // Transverse mass cut to remove W events.
@@ -167,12 +171,13 @@ int main(int argc, char **argv) {
         btag_pt.push_back(jetPt->at(ijet));
       }
     }
+
     // Apply b-tag veto to supress ttbar.
     if (btag_pt.size() > 0) {
       continue;
     }
 
-    // Last, apply dR(mu, tau) > 0.5 selection
+    // Last, apply dR(mu, tau) > 0.5 selection.
     if (Mu4Momentum.DeltaR(Tau4Momentum) < 0.5) {
       continue;
     }
@@ -196,7 +201,6 @@ int main(int argc, char **argv) {
       visibleMassOS->Fill((Mu4Momentum + Tau4Momentum).M(), evtwt);
       visibleMassOSAntiIso->SetDefaultSumw2();
       visibleMassOSAntiIso->Fill((AntiIsoMu4Momentum + Tau4Momentum).M(), evtwt);
-
     } else if (SS) {
       visibleMassSS->SetDefaultSumw2();
       visibleMassSS->Fill((Mu4Momentum + Tau4Momentum).M(), evtwt);
@@ -207,14 +211,11 @@ int main(int argc, char **argv) {
 
   // end of analysis code, close and write histograms/file
   fout->cd();
-//  visibleMassOS->Write();
-//  visibleMassSS->Write();
-//  visibleMassOSRelaxedTauIso->Write();
-//  visibleMassSSRelaxedTauIso->Write();
   fout->Write();
   fout->Close();
 }
 
+// Function to set all branch addresses.
 void setBranches(TTree *Run_Tree) {
   //########################################   General Info
   Run_Tree->SetBranchAddress("isData", &isData);
