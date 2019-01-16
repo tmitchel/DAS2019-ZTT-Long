@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
     // Variables needed later.
     bool OS(false), SS(false);
     vector<float> btag_pt;
-    vector<int> good_ele_idx, good_tau_charge;
+    vector<int> good_ele_idx, good_tau_idx;
 
     // Give a progress report while running.
     if (i % 1000 == 0) {
@@ -193,7 +193,7 @@ int main(int argc, char **argv) {
     for (int ijet = 0; ijet < nJet; ijet++) {
       Jet4Momentum.SetPtEtaPhiE(jetPt->at(ijet), jetEta->at(ijet), jetPhi->at(ijet), jetEn->at(ijet));
       if (jetPt->at(ijet) > 20 && fabs(jetEta->at(ijet)) < 2.5 && jetCSV2BJetTags->at(ijet) > 0.8484 &&
-          Jet4Momentum.DeltaR(Tau4Momentum) > 0.5 && Jet4Momentum.DeltaR(Mu4Momentum) > 0.5) {
+          Jet4Momentum.DeltaR(Tau4Momentum) > 0.5 && Jet4Momentum.DeltaR(El4Momentum) > 0.5) {
         btag_pt.push_back(jetPt->at(ijet));
       }
     }
@@ -204,7 +204,7 @@ int main(int argc, char **argv) {
     }
 
     // Last, apply dR(mu, tau) > 0.5 selection.
-    if (Mu4Momentum.DeltaR(Tau4Momentum) < 0.5) {
+    if (El4Momentum.DeltaR(Tau4Momentum) < 0.5) {
       continue;
     }
 
@@ -224,14 +224,14 @@ int main(int argc, char **argv) {
     // Fill histograms.
     if (OS) {
       visibleMassOS->SetDefaultSumw2();
-      visibleMassOS->Fill((Mu4Momentum + Tau4Momentum).M(), evtwt);
+      visibleMassOS->Fill((El4Momentum + Tau4Momentum).M(), evtwt);
       visibleMassOSAntiIso->SetDefaultSumw2();
-      visibleMassOSAntiIso->Fill((AntiIsoMu4Momentum + Tau4Momentum).M(), evtwt);
+      visibleMassOSAntiIso->Fill((AntiIsoEle4Momentum + Tau4Momentum).M(), evtwt);
     } else if (SS) {
       visibleMassSS->SetDefaultSumw2();
-      visibleMassSS->Fill((Mu4Momentum + Tau4Momentum).M(), evtwt);
+      visibleMassSS->Fill((El4Momentum + Tau4Momentum).M(), evtwt);
       visibleMassSSAntiIso->SetDefaultSumw2();
-      visibleMassSSAntiIso->Fill((AntiIsoMu4Momentum + Tau4Momentum).M(), evtwt);
+      visibleMassSSAntiIso->Fill((AntiIsoEle4Momentum + Tau4Momentum).M(), evtwt);
     }
   }  // End Processing all entries
 
