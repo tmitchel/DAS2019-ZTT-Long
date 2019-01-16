@@ -31,6 +31,8 @@ Analyzers are compiled using the `Make.sh` script as shown below. The output wil
 ./Make.sh ZTT_XSection_el.cc
 ```
 
+<a name='single' />
+
 ## Running a single file
 The binary can be used to run over a single file to get a single output file as shown below.
 ```
@@ -38,6 +40,8 @@ The binary can be used to run over a single file to get a single output file as 
 ```
 
 This will run on the file `TTbar.root` and produce an output file named `TTJets.root`
+
+<a name='run' />
 
 ## Running on a directory
 A python script is included to run an analyzer on all root files in a given directory shown below
