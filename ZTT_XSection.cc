@@ -51,8 +51,9 @@ int main(int argc, char **argv) {
   cout.setf(ios::fixed, ios::floatfield);
 
   setBranches(Run_Tree);
-  auto evtwt = weightCalc(HistoTot, input);
-  cout << "LumiWeight is " << evtwt << "\n";
+  double evtwt;
+  auto lumi_weight = weightCalc(HistoTot, input);
+  cout << "LumiWeight is " << lumi_weight << "\n";
 
   auto nentries_wtn = Run_Tree->GetEntries();
   cout << "nentries_wtn====" << nentries_wtn << "\n";
@@ -63,6 +64,7 @@ int main(int argc, char **argv) {
   // Begin the event loop.
   for (Int_t i = 0; i < nentries_wtn; i++) {
     Run_Tree->GetEntry(i);
+    evtwt = lumi_weight;
 
     // Variables needed later.
     bool OS(false), SS(false);
@@ -134,7 +136,7 @@ int main(int argc, char **argv) {
       } else {
         // Good muon, now add charge to vector and fill muon P4.
         good_muon_charge.push_back(muCharge->at(imu));
-        Mu4Momentum.SetPtEtaPhiE(muPt->at(imu), muEta->at(imu), muPhi->at(imu), MuMass);
+        Mu4Momentum.SetPtEtaPhiM(muPt->at(imu), muEta->at(imu), muPhi->at(imu), MuMass);
       }
     }  // End of muon loop
 
@@ -209,7 +211,7 @@ int main(int argc, char **argv) {
         cerr << "Divide by 0 found while PU reweighting" << endl;
       }
     }
-
+    
     // Fill histograms.
     if (OS) {
       visibleMassOS->SetDefaultSumw2();
